@@ -6,8 +6,8 @@ use panic_halt as _;
 
 use core::convert::Infallible;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
-use generic_array::typenum::{U4, U6};
-use hal::gpio::{gpioa, gpiob, Floating, Input, Output, PullUp, PushPull};
+use generic_array::typenum::{U5, U6};
+use hal::gpio::{gpioa, gpiob, Input, Output, PullUp, PushPull};
 use hal::prelude::*;
 use hal::serial;
 use hal::usb;
@@ -42,12 +42,12 @@ impl<T> ResultExt<T> for Result<T, Infallible> {
 }
 
 pub struct Cols(
-    gpioa::PA15<Input<PullUp>>,
-    gpiob::PB3<Input<PullUp>>,
-    gpiob::PB4<Input<PullUp>>,
-    gpiob::PB5<Input<PullUp>>,
-    gpiob::PB8<Input<PullUp>>,
-    gpiob::PB9<Input<PullUp>>,
+    gpioa::PA0<Input<PullUp>>,
+    gpioa::PA1<Input<PullUp>>,
+    gpioa::PA2<Input<PullUp>>,
+    gpioa::PA3<Input<PullUp>>,
+    gpioa::PA4<Input<PullUp>>,
+    gpioa::PA5<Input<PullUp>>,
 );
 impl_heterogenous_array! {
     Cols,
@@ -61,17 +61,15 @@ pub struct Rows(
     gpiob::PB1<Output<PushPull>>,
     gpiob::PB2<Output<PushPull>>,
     gpiob::PB10<Output<PushPull>>,
+    gpiob::PB11<Output<PushPull>>,
 );
 impl_heterogenous_array! {
     Rows,
     dyn OutputPin<Error = Infallible>,
-    U4,
-    [0, 1, 2, 3]
+    U5,
+    [0, 1, 2, 3, 4]
 }
 
-const CUT: Action = m(&[LShift, Delete]);
-const COPY: Action = m(&[LCtrl, Insert]);
-const PASTE: Action = m(&[LShift, Insert]);
 const L2_ENTER: Action = HoldTap {
     timeout: 200,
     tap_hold_interval: 0,
@@ -79,35 +77,26 @@ const L2_ENTER: Action = HoldTap {
     hold: &l(2),
     tap: &k(Enter),
 };
-const L1_SP: Action = HoldTap {
-    timeout: 200,
-    tap_hold_interval: 0,
-    config: HoldTapConfig::Default,
-    hold: &l(1),
-    tap: &k(Space),
-};
-const CSPACE: Action = m(&[LCtrl, Space]);
-
-const SHIFT_ESC: Action = HoldTap {
-    timeout: 200,
-    tap_hold_interval: 0,
-    config: HoldTapConfig::Default,
-    hold: &k(LShift),
-    tap: &k(Escape),
-};
-const CTRL_INS: Action = HoldTap {
+const CTRL_TAB: Action = HoldTap {
     timeout: 200,
     tap_hold_interval: 0,
     config: HoldTapConfig::Default,
     hold: &k(LCtrl),
-    tap: &k(Insert),
+    tap: &k(Tab),
 };
-const ALT_NL: Action = HoldTap {
+const L1_SP: Action = HoldTap {
+    timeout: 200,
+    tap_hold_interval: 0,
+    config: HoldTapConfig::HoldOnOtherKeyPress,
+    hold: &l(1),
+    tap: &k(Space),
+};
+const RSFT_BSP: Action = HoldTap {
     timeout: 200,
     tap_hold_interval: 0,
     config: HoldTapConfig::Default,
-    hold: &k(LAlt),
-    tap: &k(NumLock),
+    hold: &k(RShift),
+    tap: &k(BSpace),
 };
 
 macro_rules! s {
@@ -115,34 +104,32 @@ macro_rules! s {
         m(&[LShift, $k])
     };
 }
-macro_rules! a {
+macro_rules! c {
     ($k:ident) => {
-        m(&[RAlt, $k])
+        m(&[LCtrl, $k])
     };
 }
 
 #[rustfmt::skip]
 pub static LAYERS: keyberon::layout::Layers = &[
     &[
-        &[k(Tab),     k(Q), k(W),  k(E),    k(R), k(T),    k(Y),     k(U),    k(I),   k(O),    k(P),     k(LBracket)],
-        &[k(RBracket),k(A), k(S),  k(D),    k(F), k(G),    k(H),     k(J),    k(K),   k(L),    k(SColon),k(Quote)   ],
-        &[k(Equal),   k(Z), k(X),  k(C),    k(V), k(B),    k(N),     k(M),    k(Comma),k(Dot), k(Slash), k(Bslash)  ],
-        &[Trans,      Trans,k(LGui),k(LAlt),L1_SP,k(LCtrl),k(RShift),L2_ENTER,k(RAlt),k(BSpace),Trans,   Trans      ],
+        &[Trans,  Trans,    k(Grave),k(Equal),k(Minus),k(Slash),k(Quote),k(Dot),  s!(Kb1), k(SColon),Trans,    Trans     ],
+        &[Trans,  k(Q),     k(W),    k(E),    k(R),    k(T),    k(Y),    k(U),    k(I),    k(O),     k(P),     k(PScreen)],
+        &[Trans,  k(A),     k(S),    k(D),    k(F),    k(G),    k(H),    k(J),    k(K),    k(L),     k(Escape),k(Insert) ],
+        &[k(LAlt),k(RShift),k(Z),    k(X),    k(C),    k(V),    k(B),    k(N),    k(M),    k(Delete),k(RCtrl), k(RAlt)   ],
+        &[Trans,  Trans,    Trans,   CTRL_TAB,L1_SP,   k(LGui), Trans,   L2_ENTER,RSFT_BSP,Trans,    Trans,    Trans     ],
     ], &[
-        &[Trans,         k(Pause),Trans, k(PScreen),Trans,    Trans,Trans,      k(BSpace),k(Delete),Trans,  Trans,   Trans ],
-        &[Trans,         Trans,   ALT_NL,CTRL_INS,  SHIFT_ESC,Trans,k(CapsLock),k(Left),  k(Down),  k(Up),  k(Right),Trans ],
-        &[k(NonUsBslash),k(Undo), CUT,   COPY,      PASTE,    Trans,Trans,      k(Home),  k(PgDown),k(PgUp),k(End),  Trans ],
-        &[Trans,         Trans,   Trans, Trans,     Trans,    Trans,Trans,      Trans,    Trans,    Trans,  Trans,   Trans ],
+        &[Trans,Trans,s!(Kb2),s!(Comma),   s!(Dot),     s!(Kb6),   Trans,    c!(PgUp), Trans,  c!(PgDown),Trans, Trans],
+        &[Trans,Trans,s!(Kb3),s!(LBracket),s!(RBracket),s!(Kb8),   k(PgUp),  c!(Left), k(Up),  c!(Right), Trans, Trans],
+        &[Trans,Trans,s!(Kb4),s!(Kb9),     s!(Kb0),     s!(Kb7),   k(Home),  k(Left),  k(Down),k(Right),  k(End),Trans],
+        &[Trans,Trans,s!(Kb5),k(LBracket), k(RBracket), s!(Bslash),k(PgDown),Trans,    Trans,  Trans,     Trans, Trans],
+        &[Trans,Trans,Trans,  Trans,       Trans,       Trans,     Trans,    Trans,    Trans,  Trans,     Trans, Trans],
     ], &[
-        &[s!(Grave),s!(Kb1),s!(Kb2),s!(Kb3),s!(Kb4),s!(Kb5),s!(Kb6),s!(Kb7),s!(Kb8),s!(Kb9),s!(Kb0),s!(Minus)],
-        &[ k(Grave), k(Kb1), k(Kb2), k(Kb3), k(Kb4), k(Kb5), k(Kb6), k(Kb7), k(Kb8), k(Kb9), k(Kb0), k(Minus)],
-        &[a!(Grave),a!(Kb1),a!(Kb2),a!(Kb3),a!(Kb4),a!(Kb5),a!(Kb6),a!(Kb7),a!(Kb8),a!(Kb9),a!(Kb0),a!(Minus)],
-        &[Trans,    Trans,  Trans,  Trans,  CSPACE, Trans,  Trans,  Trans,  Trans,  Trans,  Trans,  Trans    ],
-    ], &[
-        &[k(F1),k(F2),k(F3),k(F4),k(F5),k(F6),k(F7),k(F8),k(F9),k(F10),k(F11),k(F12)],
-        &[Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans, Trans, Trans ],
-        &[Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans, Trans, Trans ],
-        &[Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans,Trans, Trans, Trans ],
+        &[Trans,Trans,Trans,Trans, Trans, Trans, Trans, k(Dot),Trans, Trans, Trans,Trans],
+        &[Trans,Trans,k(F1),k(F2), k(F3), k(F4), k(Kb0),k(Kb1),k(Kb2),k(Kb3),Trans,Trans],
+        &[Trans,Trans,k(F5),k(F6), k(F7), k(F8), Trans, k(Kb4),k(Kb5),k(Kb6),Trans,Trans],
+        &[Trans,Trans,k(F9),k(F10),k(F11),k(F12),Trans, k(Kb7),k(Kb8),k(Kb9),Trans,Trans],
+        &[Trans,Trans,Trans,Trans, Trans, Trans, Trans, Trans, Trans, Trans, Trans,Trans],
     ],
 ];
 
@@ -152,7 +139,7 @@ const APP: () = {
         usb_dev: UsbDevice,
         usb_class: UsbClass,
         matrix: Matrix<Cols, Rows>,
-        debouncer: Debouncer<PressedKeys<U4, U6>>,
+        debouncer: Debouncer<PressedKeys<U5, U6>>,
         layout: Layout,
         timer: timers::Timer<stm32::TIM3>,
         transform: fn(Event) -> Event,
@@ -177,6 +164,10 @@ const APP: () = {
         let gpioa = c.device.GPIOA.split(&mut rcc);
         let gpiob = c.device.GPIOB.split(&mut rcc);
 
+        let pb8 = gpiob.pb8;
+        let mut power_led = cortex_m::interrupt::free(move |cs| pb8.into_push_pull_output(cs));
+        power_led.set_high().unwrap();
+
         let usb = usb::Peripheral {
             usb: c.device.USB,
             pin_dm: gpioa.pa11,
@@ -191,13 +182,24 @@ const APP: () = {
         let mut timer = timers::Timer::tim3(c.device.TIM3, 1.khz(), &mut rcc);
         timer.listen(timers::Event::TimeOut);
 
-        let pb12: &gpiob::PB12<Input<Floating>> = &gpiob.pb12;
-        let is_left = pb12.is_low().get();
-        let transform: fn(Event) -> Event = if is_left {
-            |e| e
-        } else {
+        let pb6 = gpiob.pb6;
+        let is_flipped = cortex_m::interrupt::free(move |cs| pb6.into_pull_up_input(cs))
+            .is_low()
+            .get();
+        let transform: fn(Event) -> Event = if is_flipped {
             |e| e.transform(|i, j| (i, 11 - j))
+        } else {
+            |e| e
         };
+
+        let pb9 = gpiob.pb9;
+        let mut status_led = cortex_m::interrupt::free(move |cs| pb9.into_push_pull_output(cs));
+        if is_flipped {
+            status_led.set_high()
+        } else {
+            status_led.set_low()
+        }
+        .unwrap();
 
         let (pa9, pa10) = (gpioa.pa9, gpioa.pa10);
         let pins = cortex_m::interrupt::free(move |cs| {
@@ -207,22 +209,33 @@ const APP: () = {
         serial.listen(serial::Event::Rxne);
         let (tx, rx) = serial.split();
 
-        let pa15 = gpioa.pa15;
+        let pa0 = gpioa.pa0;
+        let pa1 = gpioa.pa1;
+        let pa2 = gpioa.pa2;
+        let pa3 = gpioa.pa3;
+        let pa4 = gpioa.pa4;
+        let pa5 = gpioa.pa5;
+        let pb0 = gpiob.pb0;
+        let pb1 = gpiob.pb1;
+        let pb2 = gpiob.pb2;
+        let pb10 = gpiob.pb10;
+        let pb11 = gpiob.pb11;
         let matrix = cortex_m::interrupt::free(move |cs| {
             Matrix::new(
                 Cols(
-                    pa15.into_pull_up_input(cs),
-                    gpiob.pb3.into_pull_up_input(cs),
-                    gpiob.pb4.into_pull_up_input(cs),
-                    gpiob.pb5.into_pull_up_input(cs),
-                    gpiob.pb8.into_pull_up_input(cs),
-                    gpiob.pb9.into_pull_up_input(cs),
+                    pa0.into_pull_up_input(cs),
+                    pa1.into_pull_up_input(cs),
+                    pa2.into_pull_up_input(cs),
+                    pa3.into_pull_up_input(cs),
+                    pa4.into_pull_up_input(cs),
+                    pa5.into_pull_up_input(cs),
                 ),
                 Rows(
-                    gpiob.pb0.into_push_pull_output(cs),
-                    gpiob.pb1.into_push_pull_output(cs),
-                    gpiob.pb2.into_push_pull_output(cs),
-                    gpiob.pb10.into_push_pull_output(cs),
+                    pb0.into_push_pull_output(cs),
+                    pb1.into_push_pull_output(cs),
+                    pb2.into_push_pull_output(cs),
+                    pb10.into_push_pull_output(cs),
+                    pb11.into_push_pull_output(cs),
                 ),
             )
         });
@@ -267,7 +280,10 @@ const APP: () = {
     fn handle_event(mut c: handle_event::Context, event: Option<Event>) {
         let report: KbHidReport = match event {
             None => c.resources.layout.tick().collect(),
-            Some(e) => {c.resources.layout.event(e); return},
+            Some(e) => {
+                c.resources.layout.event(e);
+                return;
+            }
         };
         if !c
             .resources
