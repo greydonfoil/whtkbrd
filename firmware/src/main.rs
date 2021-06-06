@@ -279,7 +279,10 @@ const APP: () = {
     #[task(priority = 3, capacity = 8, resources = [usb_dev, usb_class, layout])]
     fn handle_event(mut c: handle_event::Context, event: Option<Event>) {
         let report: KbHidReport = match event {
-            None => c.resources.layout.tick().collect(),
+            None => {
+                c.resources.layout.tick();
+                c.resources.layout.keycodes().collect()
+            }
             Some(e) => {
                 c.resources.layout.event(e);
                 return;
