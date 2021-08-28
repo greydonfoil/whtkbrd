@@ -91,7 +91,7 @@ const L1_SP: Action = HoldTap {
     hold: &l(1),
     tap: &k(Space),
 };
-const RSFT_BSP: Action = HoldTap {
+const SFT_BSP: Action = HoldTap {
     timeout: 200,
     tap_hold_interval: 0,
     config: HoldTapConfig::Default,
@@ -110,26 +110,53 @@ macro_rules! c {
     };
 }
 
+const WORD_LEFT: Action = c!(Left);
+const WORD_RIGHT: Action = c!(Right);
+const PREV_TAB: Action = c!(PgUp);
+const NEXT_TAB: Action = c!(PgDown);
+
 #[rustfmt::skip]
 pub static LAYERS: keyberon::layout::Layers = &[
     &[
-        &[Trans,  Trans,    k(Grave),k(Equal),k(Minus),k(Slash),k(Quote),k(Dot),  s!(Kb1), k(SColon),Trans,    Trans     ],
-        &[Trans,  k(Q),     k(W),    k(E),    k(R),    k(T),    k(Y),    k(U),    k(I),    k(O),     k(P),     k(PScreen)],
-        &[Trans,  k(A),     k(S),    k(D),    k(F),    k(G),    k(H),    k(J),    k(K),    k(L),     k(Escape),k(Insert) ],
-        &[k(LAlt),k(RShift),k(Z),    k(X),    k(C),    k(V),    k(B),    k(N),    k(M),    k(Delete),k(RCtrl), k(RAlt)   ],
-        &[Trans,  Trans,    Trans,   CTRL_TAB,L1_SP,   k(LGui), Trans,   L2_ENTER,RSFT_BSP,Trans,    Trans,    Trans     ],
+        // Layer 0: Alphas
+        //-----L0----- , -----L1----- , -----L2----- , -----L3----- , -----L4----- , -----L5----- --SPLIT-- , -----R5----- , -----R4----- , -----R3----- , -----R2----- , -----R1----- , -----R0----- ,
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+        &[Trans        , k(Q)         , k(W)         , k(E)         , k(R)         , k(T)                   , k(Y)         , k(U)         , k(I)         , k(O)         , k(P)         , Trans        ],
+        &[Trans        , k(A)         , k(S)         , k(D)         , k(F)         , k(G)                   , k(H)         , k(J)         , k(K)         , k(L)         , k(Escape)    , Trans        ],
+        &[Trans        , k(RShift)    , k(Z)         , k(X)         , k(C)         , k(V)                   , k(B)         , k(N)         , k(M)         , k(Delete)    , l(4)         , Trans        ],
+        &[Trans        , Trans        , k(LAlt)      , CTRL_TAB     , L1_SP        , k(LGui)                , l(3)         , L2_ENTER     , SFT_BSP      , k(RAlt)      , Trans        , Trans        ],
     ], &[
-        &[Trans,Trans,s!(Kb2),s!(Comma),   s!(Dot),     s!(Kb6),   Trans,    c!(PgUp), Trans,  c!(PgDown),Trans, Trans],
-        &[Trans,Trans,s!(Kb3),s!(LBracket),s!(RBracket),s!(Kb8),   k(PgUp),  c!(Left), k(Up),  c!(Right), Trans, Trans],
-        &[Trans,Trans,s!(Kb4),s!(Kb9),     s!(Kb0),     s!(Kb7),   k(Home),  k(Left),  k(Down),k(Right),  k(End),Trans],
-        &[Trans,Trans,s!(Kb5),k(LBracket), k(RBracket), s!(Bslash),k(PgDown),Trans,    Trans,  Trans,     Trans, Trans],
-        &[Trans,Trans,Trans,  Trans,       Trans,       Trans,     Trans,    Trans,    Trans,  Trans,     Trans, Trans],
+        // Layer 1: Brackets and Navigation keys
+        //-----L0----- , -----L1----- , -----L2----- , -----L3----- , -----L4----- , -----L5-----           , -----R5----- , -----R4----- , -----R3----- , -----R2----- , -----R1----- , -----R0----- ,
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+        &[Trans        , k(No)        , k(No)        , s!(LBracket) , s!(RBracket) , k(No)                  , k(PgUp)      , WORD_LEFT    , k(Up)        , WORD_RIGHT   , k(PScreen)   , Trans        ],
+        &[Trans        , k(No)        , s!(Comma)    , s!(Kb9)      , s!(Kb0)      , s!(Dot)                , k(Home)      , k(Left)      , k(Down)      , k(Right)     , k(End)       , Trans        ],
+        &[Trans        , Trans        , k(No)        , k(LBracket)  , k(RBracket)  , k(No)                  , k(PgDown)    , PREV_TAB     , NEXT_TAB     , k(Insert)    , Trans        , Trans        ],
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
     ], &[
-        &[Trans,Trans,Trans,Trans, Trans, Trans, Trans, k(Dot),Trans, Trans, Trans,Trans],
-        &[Trans,Trans,k(F1),k(F2), k(F3), k(F4), k(Kb0),k(Kb1),k(Kb2),k(Kb3),Trans,Trans],
-        &[Trans,Trans,k(F5),k(F6), k(F7), k(F8), Trans, k(Kb4),k(Kb5),k(Kb6),Trans,Trans],
-        &[Trans,Trans,k(F9),k(F10),k(F11),k(F12),Trans, k(Kb7),k(Kb8),k(Kb9),Trans,Trans],
-        &[Trans,Trans,Trans,Trans, Trans, Trans, Trans, Trans, Trans, Trans, Trans,Trans],
+        // Layer 2: Symbols
+        //-----L0----- , -----L1----- , -----L2----- , -----L3----- , -----L4----- , -----L5-----           , -----R5----- , -----R4----- , -----R3----- , -----R2----- , -----R1----- , -----R0----- ,
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+        &[Trans        , k(No)        , s!(Grave)    , s!(Equal)    , s!(Minus)    , k(Bslash)              , s!(Quote)    , k(Comma)     , s!(Slash)    , s!(SColon)   , k(No)        , Trans        ],
+        &[Trans        , k(No)        , k(Grave)     , k(Equal)     , k(Minus)     , k(Slash)               , k(Quote)     , k(Dot)       , s!(Kb1)      , k(SColon)    , k(No)        , Trans        ],
+        &[Trans        , Trans        , s!(Bslash)   , s!(Kb7)      , s!(Kb8)      , s!(Kb6)                , s!(Kb2)      , s!(Kb3)      , s!(Kb4)      , s!(Kb5)      , Trans        , Trans        ],
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+    ], &[
+        // Layer 3: Function and Number keys
+        //-----L0----- , -----L1----- , -----L2----- , -----L3----- , -----L4----- , -----L5-----           , -----R5----- , -----R4----- , -----R3----- , -----R2----- , -----R1----- , -----R0----- ,
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+        &[Trans        , k(No)        , k(F1)        , k(F2)        , k(F3)        , k(F4)                  , k(Kb0)       , k(Kb1)       , k(Kb2)       , k(Kb3)       , k(No)        , Trans        ],
+        &[Trans        , k(No)        , k(F5)        , k(F6)        , k(F7)        , k(F8)                  , k(Dot)       , k(Kb4)       , k(Kb5)       , k(Kb6)       , k(No)        , Trans        ],
+        &[Trans        , Trans        , k(F9)        , k(F10)       , k(F11)       , k(F12)                 , k(No)        , k(Kb7)       , k(Kb8)       , k(Kb9)       , Trans        , Trans        ],
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+    ], &[
+        // Layer 4: Thumb keys without tap-hold
+        //-----L0----- , -----L1----- , -----L2----- , -----L3----- , -----L4----- , -----L5-----           , -----R5----- , -----R4----- , -----R3----- , -----R2----- , -----R1----- , -----R0----- ,
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
+        &[Trans        , Trans        , Trans        , k(Tab)       , k(Space)     , Trans                  , Trans        , k(Enter)     , k(BSpace)    , Trans        , Trans        , Trans        ],
     ],
 ];
 
