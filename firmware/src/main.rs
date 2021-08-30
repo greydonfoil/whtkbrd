@@ -150,7 +150,7 @@ pub static LAYERS: keyberon::layout::Layers = &[
         &[Trans        , Trans        , k(F9)        , k(F10)       , k(F11)       , k(F12)                 , k(No)        , k(Kb7)       , k(Kb8)       , k(Kb9)       , Trans        , Trans        ],
         &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
     ], &[
-        // Layer 4: Thumb keys without tap-hold
+        // Layer 4: Thumb keys without hold-tap
         //-----L0----- , -----L1----- , -----L2----- , -----L3----- , -----L4----- , -----L5-----           , -----R5----- , -----R4----- , -----R3----- , -----R2----- , -----R1----- , -----R0----- ,
         &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
         &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
@@ -178,6 +178,7 @@ const APP: () = {
     fn init(mut c: init::Context) -> init::LateResources {
         static mut USB_BUS: Option<UsbBusAllocator<usb::UsbBusType>> = None;
 
+        // Setup MCU clocks.
         let mut rcc = c
             .device
             .RCC
@@ -191,43 +192,19 @@ const APP: () = {
         let gpioa = c.device.GPIOA.split(&mut rcc);
         let gpiob = c.device.GPIOB.split(&mut rcc);
 
-        let pb8 = gpiob.pb8;
-        let mut power_led = cortex_m::interrupt::free(move |cs| pb8.into_push_pull_output(cs));
-        power_led.set_high().unwrap();
-
+        // Setup USB as HID for keyberon.
         let usb = usb::Peripheral {
             usb: c.device.USB,
             pin_dm: gpioa.pa11,
             pin_dp: gpioa.pa12,
         };
+
         *USB_BUS = Some(usb::UsbBusType::new(usb));
         let usb_bus = USB_BUS.as_ref().unwrap();
-
         let usb_class = keyberon::new_class(usb_bus, ());
         let usb_dev = keyberon::new_device(usb_bus);
 
-        let mut timer = timers::Timer::tim3(c.device.TIM3, 1.khz(), &mut rcc);
-        timer.listen(timers::Event::TimeOut);
-
-        let pb6 = gpiob.pb6;
-        let is_flipped = cortex_m::interrupt::free(move |cs| pb6.into_pull_up_input(cs))
-            .is_low()
-            .get();
-        let transform: fn(Event) -> Event = if is_flipped {
-            |e| e.transform(|i, j| (i, 11 - j))
-        } else {
-            |e| e
-        };
-
-        let pb9 = gpiob.pb9;
-        let mut status_led = cortex_m::interrupt::free(move |cs| pb9.into_push_pull_output(cs));
-        if is_flipped {
-            status_led.set_high()
-        } else {
-            status_led.set_low()
-        }
-        .unwrap();
-
+        // Setup serial communication between keyboard sides.
         let (pa9, pa10) = (gpioa.pa9, gpioa.pa10);
         let pins = cortex_m::interrupt::free(move |cs| {
             (pa9.into_alternate_af1(cs), pa10.into_alternate_af1(cs))
@@ -236,6 +213,11 @@ const APP: () = {
         serial.listen(serial::Event::Rxne);
         let (tx, rx) = serial.split();
 
+        // Setup timer for switch polling and communication TX tick.
+        let mut timer = timers::Timer::tim3(c.device.TIM3, 1.khz(), &mut rcc);
+        timer.listen(timers::Event::TimeOut);
+
+        // Setup key switch matrix.
         let pa0 = gpioa.pa0;
         let pa1 = gpioa.pa1;
         let pa2 = gpioa.pa2;
@@ -267,19 +249,55 @@ const APP: () = {
             )
         });
 
+        // Setup debouncer to avoid double registering of key presses.
+        let debouncer = Debouncer::new(PressedKeys::default(), PressedKeys::default(), 5);
+
+        // Setup keyboard layout.
+        let layout = Layout::new(LAYERS);
+
+        // Setup transform to map the switch matrix to the layout.
+        let pb6 = gpiob.pb6;
+        // Detect keyboard side
+        let is_right_side = cortex_m::interrupt::free(move |cs| pb6.into_pull_up_input(cs))
+            .is_low()
+            .get();
+        let transform: fn(Event) -> Event = if is_right_side {
+            // Flip and offset right side of keyboard so that the switch matrix is mapped to the correct part of the layout.
+            |e| e.transform(|i, j| (i, 11 - j))
+        } else {
+            // No transform for left side.
+            |e| e
+        };
+
+        // Set status led to indicate side.
+        let pb9 = gpiob.pb9;
+        let mut status_led = cortex_m::interrupt::free(move |cs| pb9.into_push_pull_output(cs));
+        if is_right_side {
+            status_led.set_high()
+        } else {
+            status_led.set_low()
+        }
+        .unwrap();
+
+        // Set power led after successful init.
+        let pb8 = gpiob.pb8;
+        let mut power_led = cortex_m::interrupt::free(move |cs| pb8.into_push_pull_output(cs));
+        power_led.set_high().unwrap();
+
         init::LateResources {
             usb_dev,
             usb_class,
             timer,
-            debouncer: Debouncer::new(PressedKeys::default(), PressedKeys::default(), 5),
+            debouncer,
             matrix: matrix.get(),
-            layout: Layout::new(LAYERS),
+            layout,
             transform,
             tx,
             rx,
         }
     }
 
+    /// Serial se
     #[task(binds = USART1, priority = 5, spawn = [handle_event], resources = [rx])]
     fn rx(c: rx::Context) {
         static mut BUF: [u8; 4] = [0; 4];
@@ -289,7 +307,7 @@ const APP: () = {
             BUF[3] = b;
 
             if BUF[3] == b'\n' {
-                if let Ok(event) = de(&BUF[..]) {
+                if let Ok(event) = deserialize(&BUF[..]) {
                     c.spawn.handle_event(Some(event)).unwrap();
                 }
             }
@@ -343,7 +361,7 @@ const APP: () = {
             .events(c.resources.matrix.get().get())
             .map(c.resources.transform)
         {
-            for &b in &ser(event) {
+            for &b in &serialize(event) {
                 block!(c.resources.tx.write(b)).get();
             }
             c.spawn.handle_event(Some(event)).unwrap();
@@ -356,14 +374,14 @@ const APP: () = {
     }
 };
 
-fn de(bytes: &[u8]) -> Result<Event, ()> {
+fn deserialize(bytes: &[u8]) -> Result<Event, ()> {
     match *bytes {
         [b'P', i, j, b'\n'] => Ok(Event::Press(i, j)),
         [b'R', i, j, b'\n'] => Ok(Event::Release(i, j)),
         _ => Err(()),
     }
 }
-fn ser(e: Event) -> [u8; 4] {
+fn serialize(e: Event) -> [u8; 4] {
     match e {
         Event::Press(i, j) => [b'P', i, j, b'\n'],
         Event::Release(i, j) => [b'R', i, j, b'\n'],
