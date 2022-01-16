@@ -120,11 +120,11 @@ pub static LAYERS: keyberon::layout::Layers = &[
     &[
         // Layer 0: Alphas
         //-----L0----- , -----L1----- , -----L2----- , -----L3----- , -----L4----- , -----L5----- --SPLIT-- , -----R5----- , -----R4----- , -----R3----- , -----R2----- , -----R1----- , -----R0----- ,
-        &[Trans        , Trans        , Trans        , Trans        , Trans        , Trans                  , Trans        , Trans        , Trans        , Trans        , Trans        , Trans        ],
-        &[Trans        , k(Q)         , k(W)         , k(E)         , k(R)         , k(T)                   , k(Y)         , k(U)         , k(I)         , k(O)         , k(P)         , Trans        ],
-        &[Trans        , k(A)         , k(S)         , k(D)         , k(F)         , k(G)                   , k(H)         , k(J)         , k(K)         , k(L)         , k(Escape)    , Trans        ],
-        &[Trans        , k(RShift)    , k(Z)         , k(X)         , k(C)         , k(V)                   , k(B)         , k(N)         , k(M)         , k(Delete)    , l(4)         , Trans        ],
-        &[Trans        , Trans        , k(LAlt)      , CTRL_TAB     , L1_SP        , k(LGui)                , l(3)         , L2_ENTER     , SFT_BSP      , k(RAlt)      , Trans        , Trans        ],
+        &[k(Grave)     , k(Kb1)       , k(Kb2)       , k(Kb3)       , k(Kb4)       , k(Kb5)                 , k(Kb6)       , k(Kb7)       , k(Kb8)       , k(Kb9)       , k(Kb0)       , k(Minus)     ],
+        &[k(Tab)       , k(Q)         , k(W)         , k(E)         , k(R)         , k(T)                   , k(Y)         , k(U)         , k(I)         , k(O)         , k(P)         , k(Equal)     ],
+        &[k(LCtrl)     , k(A)         , k(S)         , k(D)         , k(F)         , k(G)                   , k(H)         , k(J)         , k(K)         , k(L)         , k(SColon)    , k(Quote)     ],
+        &[k(LShift)    , k(Z)         , k(X)         , k(C)         , k(V)         , k(B)                   , k(N)         , k(M)         , k(Comma)     , k(Dot)       , k(Slash)     , l(1)         ],
+        &[Trans        , Trans        , l(1)         , k(LGui)      , k(BSpace)    , k(Delete)              , k(Enter)     , k(Space)     , k(RAlt)      , l(2)         , Trans        , Trans        ],
     ], &[
         // Layer 1: Brackets and Navigation keys
         //-----L0----- , -----L1----- , -----L2----- , -----L3----- , -----L4----- , -----L5-----           , -----R5----- , -----R4----- , -----R3----- , -----R2----- , -----R1----- , -----R0----- ,
@@ -258,9 +258,10 @@ const APP: () = {
         // Setup transform to map the switch matrix to the layout.
         let pb6 = gpiob.pb6;
         // Detect keyboard side
-        let is_right_side = cortex_m::interrupt::free(move |cs| pb6.into_pull_up_input(cs))
-            .is_low()
-            .get();
+//        let is_right_side = cortex_m::interrupt::free(move |cs| pb6.into_pull_up_input(cs))
+//            .is_low()
+	//            .get();
+	let is_right_side = true;
         let transform: fn(Event) -> Event = if is_right_side {
             // Flip and offset right side of keyboard so that the switch matrix is mapped to the correct part of the layout.
             |e| e.transform(|i, j| (i, 11 - j))
